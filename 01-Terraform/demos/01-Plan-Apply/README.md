@@ -47,6 +47,9 @@ Uma EC2 rodando Nginx, criada e destruída inteiramente por código — **a prov
 |-------|----------------|--------|-------|
 | [Parte 1](#parte-1---o-ciclo-básico-com-uma-ec2) | O ciclo básico com uma EC2 | [1](#passo-1) · [2](#passo-2) · [3](#passo-3) · [4](#passo-4) · [5](#passo-5) · [6](#passo-6) · [7](#passo-7) · [8](#passo-8) | ~12 min |
 | [Parte 2](#parte-2---uma-ec2-que-vira-servidor-web) | Uma EC2 que vira servidor web | [9](#passo-9) · [10](#passo-10) · [11](#passo-11) · [12](#passo-12) · [13](#passo-13) · [14](#passo-14) · [15](#passo-15) · [16](#passo-16) · [17](#passo-17) · [18](#passo-18) | ~18 min |
+| [Parte 3](#parte-3---lendo-o-plano-o-que-vai-mudar) | Lendo o plano: o que vai mudar | [19](#passo-19) · [20](#passo-20) · [21](#passo-21) · [22](#passo-22) | ~12 min |
+| [Parte 4](#parte-4---drift-quando-alguém-mexe-no-console) | Drift: quando alguém mexe no console | [23](#passo-23) · [24](#passo-24) · [25](#passo-25) · [26](#passo-26) | ~12 min |
+| [Parte 5](#parte-5---o-que-o-terraform-sabe-o-estado) | O que o Terraform sabe: o estado | [27](#passo-27) · [28](#passo-28) · [29](#passo-29) | ~8 min |
 
 > [!TIP]
 > Se travou em algum passo, clique no número dele na coluna **Passos**.
@@ -487,9 +490,300 @@ Se chegou até aqui, você:
 
 ---
 
+## Parte 3 - Lendo o plano: o que vai mudar
+
+> Diego volta à sua mesa: *— "Antes de mexer em qualquer coisa da Vortex, você precisa **ler o plano**. Tem mudança que o Terraform faz no lugar, e tem mudança que **destrói e recria** o recurso. Confundir as duas, em produção, derruba serviço."*
+
+### Resultado esperado desta parte
+
+Você vai aprender a distinguir os três símbolos do `plan` (`+` criar, `~` alterar no lugar, `-/+` destruir e recriar) usando a EC2 simples da pasta `EC2`.
+
+---
+
+<a id="passo-19"></a>
+
+**19.** Volte para a pasta da EC2 simples (sem provisioner) e suba uma instância:
+
+```bash
+cd /workspaces/FIAP-Platform-Engineering/01-Terraform/demos/01-Plan-Apply/EC2
+terraform apply -auto-approve
+```
+
+---
+
+<a id="passo-20"></a>
+
+**20.** Agora **adicione uma tag** sem mudar mais nada. Abra o `instance.tf`:
+
+```bash
+code instance.tf
+```
+
+Deixe o recurso assim (adicione o bloco `tags`):
+
+```hcl
+resource "aws_instance" "example" {
+  ami           = data.aws_ami.amazon_linux.id
+  instance_type = "t3.micro"
+
+  tags = {
+    Name = "vortex-poc"
+  }
+}
+```
+
+Rode o `plan` e **leia o símbolo**:
+
+```bash
+terraform plan
+```
+
+O Terraform mostra `~ update in-place` — uma tag é um atributo mutável, então ele **altera a máquina existente**, sem recriar.
+
+<details>
+<summary><b>💡 Clique para entender: os símbolos do plano</b></summary>
+<blockquote>
+
+O `plan` antecede toda mudança e usa símbolos para dizer **o que** vai acontecer:
+
+- `+` — recurso será **criado**
+- `-` — recurso será **destruído**
+- `~` — recurso será **alterado no lugar** (in-place), sem perder identidade/IP
+- `-/+` — recurso será **destruído e recriado** (replace). O `plan` mostra o motivo com `# forces replacement` ao lado do atributo culpado
+
+Ler esse diff é a habilidade mais importante do dia a dia: é a diferença entre uma mudança segura e uma que derruba produção. Por isso a regra de ouro é **sempre rodar `plan` antes de `apply`** e ler cada linha.
+
+Documentação oficial: [Terraform plan](https://developer.hashicorp.com/terraform/cli/commands/plan)
+
+</blockquote>
+</details>
+
+Em seguida aplique a tag (é uma alteração in-place, rápida):
+
+```bash
+terraform apply -auto-approve
+```
+
+---
+
+<a id="passo-21"></a>
+
+**21.** Agora provoque o outro tipo de mudança: **fixar a Availability Zone** da máquina. Edite o `instance.tf` e adicione a linha `availability_zone`:
+
+```hcl
+resource "aws_instance" "example" {
+  ami               = data.aws_ami.amazon_linux.id
+  instance_type     = "t3.micro"
+  availability_zone = "us-east-1b"
+
+  tags = {
+    Name = "vortex-poc"
+  }
+}
+```
+
+Rode o `plan`:
+
+```bash
+terraform plan
+```
+
+Desta vez aparece `# forces replacement` na linha do `availability_zone`, e o resumo vira `Plan: 1 to add, 0 to change, 1 to destroy` — ou seja, **destruir e recriar**. Uma instância não pode "mudar de zona" no lugar: a AWS precisa criar outra na zona nova e apagar a antiga.
+
+> [!IMPORTANT]
+> É exatamente aqui que mora o risco: um replace (`1 to destroy`) numa máquina de produção significa **downtime**. O `plan` te avisa **antes**. Em demos seguintes (e na vida real) usamos recursos como `create_before_destroy` para suavizar isso.
+
+<details>
+<summary><b>💡 Clique para entender: por que a zona força replace e o tipo não</b></summary>
+<blockquote>
+
+Cada atributo de um recurso é marcado pelo provider como *updatable in-place* ou *force-new*. A **Availability Zone** é uma propriedade de posicionamento físico decidida na criação — mudá-la exige uma máquina nova, então é *force-new*. Já o `instance_type`, em instâncias modernas (família Nitro, como as `t3`), a AWS consegue alterar com um stop/start, então o provider o trata como *update in-place*. Não dá para adivinhar de cabeça: o `plan` é a fonte da verdade sobre o que é replace e o que é in-place — por isso a regra é sempre lê-lo.
+
+</blockquote>
+</details>
+
+---
+
+<a id="passo-22"></a>
+
+**22.** **Não** aplique a recriação. Remova a linha `availability_zone` que você adicionou (voltando o `instance.tf` ao estado do passo 20, com a tag), confirme que o `plan` volta a `No changes`, e destrua:
+
+```bash
+terraform plan
+terraform destroy -auto-approve
+```
+
+### Checkpoint
+
+Se chegou até aqui, você:
+
+- viu o símbolo `~` (alteração in-place) ao adicionar uma tag
+- viu o símbolo `-/+` (replace com downtime) ao mudar o tipo da instância
+- entendeu por que ler o `plan` antes do `apply` é inegociável
+
+---
+
+## Parte 4 - Drift: quando alguém mexe no console
+
+> **A dor da Vortex em pessoa.** Helena aparece: *— "Semana passada alguém entrou no console e mudou uma configuração na mão. Ninguém anotou. Quando fomos rodar o código, deu ruim. Como o Terraform lida com isso?"*
+>
+> Diego: *— "Isso tem nome: **drift**. É a infra real divergindo do que está no código. Deixa eu te mostrar o Terraform detectando e corrigindo."*
+
+### Resultado esperado desta parte
+
+Você vai criar uma EC2 por código, **alterá-la pelo console/CLI da AWS** (simulando o "alguém mexeu na mão") e ver o Terraform **detectar o drift** no `plan` e **reconciliar** no `apply`.
+
+---
+
+<a id="passo-23"></a>
+
+**23.** Suba a EC2 simples de novo e guarde o ID dela numa variável de shell. A pasta `EC2` tem um `outputs.tf` que expõe o `instance_id`, então usamos `terraform output -raw` (saída limpa, sem formatação):
+
+```bash
+cd /workspaces/FIAP-Platform-Engineering/01-Terraform/demos/01-Plan-Apply/EC2
+terraform apply -auto-approve
+INSTANCE_ID=$(terraform output -raw instance_id)
+echo "Instância gerenciada pelo Terraform: $INSTANCE_ID"
+```
+
+---
+
+<a id="passo-24"></a>
+
+**24.** Agora **simule o "alguém mexeu no console"**: adicione uma tag direto pela AWS CLI, **por fora** do Terraform.
+
+```bash
+aws ec2 create-tags --resources "$INSTANCE_ID" --tags Key=MexidoNaMao,Value=sim
+```
+
+> [!NOTE]
+> Isso é exatamente o que acontece quando alguém abre o console da AWS e clica para "ajustar rapidinho". O código não sabe que isso aconteceu.
+
+---
+
+<a id="passo-25"></a>
+
+**25.** Peça um `plan`. O Terraform compara o estado real (que ele relê da AWS) com o código e **detecta o drift**:
+
+```bash
+terraform plan
+```
+
+Você verá uma nota de que a tag `MexidoNaMao` foi **detectada fora do código** e que o `plan` quer **removê-la** para fazer a infra real voltar a bater com o código (`~ update in-place`, removendo a tag).
+
+<details>
+<summary><b>💡 Clique para entender: drift e a "fonte da verdade"</b></summary>
+<blockquote>
+
+**Drift** é a divergência entre o que está no código (estado desejado) e o que existe de fato na nuvem. O `terraform plan` relê os recursos reais via API antes de comparar, então mudanças feitas no console aparecem como diferença.
+
+O Terraform trata o **código como fonte da verdade**: o `apply` empurra a realidade de volta para o que está escrito. Foi isso que faltou na Vortex — a infra nasceu no console, sem código, então não havia fonte da verdade para reconciliar.
+
+Esse é o ciclo que quebra o "medo de automação" (*automation fear spiral*): se toda mudança passa pelo código e o drift é reconciliado continuamente, ninguém tem medo de rodar a automação.
+
+Documentação oficial: [Manage resource drift](https://developer.hashicorp.com/terraform/tutorials/state/resource-drift)
+
+</blockquote>
+</details>
+
+---
+
+<a id="passo-26"></a>
+
+**26.** Reconcilie e destrua:
+
+```bash
+terraform apply -auto-approve
+terraform destroy -auto-approve
+```
+
+O `apply` removeu a tag feita na mão — a infra real voltou a ser exatamente o que o código descreve.
+
+### Checkpoint
+
+Se chegou até aqui, você:
+
+- alterou um recurso gerenciado **por fora** do Terraform (simulando o console)
+- viu o `plan` **detectar o drift**
+- viu o `apply` **reconciliar** a realidade com o código
+
+---
+
+## Parte 5 - O que o Terraform sabe: o estado
+
+> Diego encerra o dia: *— "Você já viu o Terraform 'lembrar' o que criou. Esse mapa do que existe tem um nome: **estado**. Dá uma olhada nele antes de irmos para a próxima demo — porque na demo de state ele vai virar o centro de tudo."*
+
+### Resultado esperado desta parte
+
+Você vai inspecionar o estado do Terraform — a estrutura que ele usa para saber o que já existe — preparando o terreno para a demo 01.4.
+
+---
+
+<a id="passo-27"></a>
+
+**27.** Suba a EC2 mais uma vez e liste o que o Terraform está rastreando:
+
+```bash
+cd /workspaces/FIAP-Platform-Engineering/01-Terraform/demos/01-Plan-Apply/EC2
+terraform apply -auto-approve
+terraform state list
+```
+
+Você verá `data.aws_ami.amazon_linux` e `aws_instance.example` — os objetos que o Terraform conhece.
+
+---
+
+<a id="passo-28"></a>
+
+**28.** Veja os detalhes do recurso no estado:
+
+```bash
+terraform state show aws_instance.example
+```
+
+Repare em atributos que o **código não definiu**, mas que a AWS preencheu e o Terraform guardou: `id`, `private_ip`, `public_dns`, `arn`. Esses são os *computed attributes*.
+
+<details>
+<summary><b>💡 Clique para entender: o estado (tfstate)</b></summary>
+<blockquote>
+
+O **estado** é um arquivo JSON (`terraform.tfstate`) onde o Terraform registra o mapeamento entre cada recurso do seu código e o objeto real na nuvem (pelo `id`). É assim que ele sabe, no próximo `plan`, o que já existe, o que mudou e o que falta criar.
+
+Por enquanto esse arquivo está no disco local do Codespaces. Isso tem dois problemas que a **demo 01.4** vai resolver: (1) se você perder o Codespaces, perde o estado; (2) o time inteiro não consegue compartilhar o mesmo estado. A solução é o **state remoto** no S3.
+
+> [!WARNING]
+> Nunca edite o `tfstate` à mão — é uma API interna do Terraform. Para mexer no estado, use os comandos `terraform state ...` (você verá `state mv`/`rm` na demo 01.4).
+
+Documentação oficial: [Purpose of Terraform state](https://developer.hashicorp.com/terraform/language/state/purpose)
+
+</blockquote>
+</details>
+
+---
+
+<a id="passo-29"></a>
+
+**29.** Destrua para encerrar o lab:
+
+```bash
+terraform destroy -auto-approve
+```
+
+### Checkpoint
+
+Se chegou até aqui, você:
+
+- listou os recursos que o Terraform rastreia (`state list`)
+- inspecionou os atributos de um recurso no estado (`state show`)
+- entendeu que esse estado, hoje local, precisa virar compartilhado — o gancho da demo 01.4
+
+---
+
 ## Conclusão
 
-Você percorreu o ciclo completo do Terraform — `init`, `plan`, `apply`, `destroy` — duas vezes: uma com um recurso simples e outra com uma máquina que se configura sozinha. Esse ciclo é a fundação de tudo que vem a seguir.
+Você percorreu o ciclo completo do Terraform — `init`, `plan`, `apply`, `destroy` — e foi além: aprendeu a **ler o plano** (alteração in-place vs. recriação), viu o Terraform **detectar e corrigir drift** (a dor concreta da Vortex) e inspecionou o **estado**. Esse ciclo é a fundação de tudo que vem a seguir.
+
+**⏱️ Cronômetro de reprodutibilidade da Vortex:** *recriar um servidor web do zero, de forma confiável e auditável* — antes: minutos clicando no console, sem garantia de que sai igual. Agora: **um `apply`, ~30 segundos, idêntico toda vez.** Esse cronômetro vai reaparecer no fim de cada demo, encolhendo conforme a infra da Vortex vira código.
 
 **Mensagem para Helena:** a prova de conceito está de pé. Uma máquina da Vortex já nasce e morre de um arquivo de texto, com o `plan` mostrando exatamente o que vai acontecer antes de acontecer. O próximo passo é parar de descrever recursos soltos e começar a **componentizar** a rede em módulos reutilizáveis.
 
