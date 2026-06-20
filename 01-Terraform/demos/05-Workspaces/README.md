@@ -58,7 +58,7 @@ Os ambientes `dev` e `prod` da Vortex isolados sobre o **mesmo código**, cada u
 |-------|----------------|--------|-------|
 | [Parte 1](#parte-1---criando-os-workspaces) | Criando os workspaces | [1](#passo-1) · [2](#passo-2) · [3](#passo-3) · [4](#passo-4) · [5](#passo-5) · [6](#passo-6) · [7](#passo-7) | ~10 min |
 | [Parte 2](#parte-2---aplicando-por-ambiente) | Aplicando por ambiente e observando o dimensionamento | [8](#passo-8) · [9](#passo-9) · [10](#passo-10) · [11](#passo-11) · [12](#passo-12) · [13](#passo-13) | ~12 min |
-| [Parte 3](#parte-3---validando-com-terraform-test) | Validando com `terraform test` e encerrando o módulo | [14](#passo-14) · [15](#passo-15) · [16](#passo-16) · [17](#passo-17) | ~10 min |
+| [Parte 3](#parte-3---validando-com-terraform-test) | Validando com `terraform test` e encerrando o módulo | [14](#passo-14) · [15](#passo-15) · [16](#passo-16) | ~8 min |
 
 > [!TIP]
 > Se travou em algum passo, clique no número dele na coluna **Passos**.
@@ -459,28 +459,8 @@ terraform destroy -auto-approve
 > [!CAUTION]
 > Não esqueça nenhum workspace de pé. Se ainda houver alguma EC2 `vortex-*` no console, selecione aquele workspace (`terraform workspace select <nome>`) e rode `terraform destroy -auto-approve`.
 
----
-
-<a id="passo-17"></a>
-
-**17.** Este é o **último lab que usa a rede** (a VPC `fiap-lab` criada no Lab 01.2 e mantida de pé pelos labs 01.3 e 01.4). Agora que terminamos, destrua a rede também, **na ordem inversa** em que foi criada — primeiro as route tables, depois a VPC:
-
-```bash
-cd /workspaces/FIAP-Platform-Engineering/01-Terraform/demos/02-Modules/RT-call && terraform destroy -auto-approve
-```
-
-```bash
-cd /workspaces/FIAP-Platform-Engineering/01-Terraform/demos/02-Modules/vpc-call && terraform destroy -auto-approve
-```
-
-<details>
-<summary><b>⚠ Se der erro: <code>DependencyViolation</code> ao destruir a VPC</b></summary>
-<blockquote>
-
-Causa: ainda há algum recurso preso na VPC (uma EC2 de workspace, ou recurso de um lab anterior que não foi destruído). Confirme no painel EC2 que **não há nenhuma instância** `running` (nem `vortex-*`, nem `nginx-*`), que o destroy do `RT-call` rodou **antes** do `vpc-call`, e rode o `destroy` da VPC de novo.
-
-</blockquote>
-</details>
+> [!IMPORTANT]
+> **Não destrua a rede (VPC e route tables).** A VPC `fiap-lab` (criada no Lab 01.2 e mantida de pé desde então) é a **fundação compartilhada de todo o curso**: ainda é usada pelos módulos **02 (Ansible)** e **03 (CI/CD)** e pelo **Trabalho Final**, todos descobrindo essa rede por tag. As EC2 dos workspaces que você acabou de destruir é que custavam por hora — a VPC, subnets e route tables são **gratuitas** e ficam de pé sem agredir o orçamento da conta. **Nenhum lab do curso destrói essa rede.**
 
 ### Checkpoint
 
@@ -489,7 +469,7 @@ Se chegou até aqui:
 - entendeu o arquivo `tests/workspace.tftest.hcl`
 - rodou `terraform test` e viu `Success! 1 passed, 0 failed.`
 - destruiu as EC2 de `dev` e `prod` — nenhuma instância `vortex-*` ficou rodando
-- destruiu a **rede** (route tables + VPC) — a conta está totalmente limpa ao fim do Mês 1
+- **manteve a rede de pé** (VPC + route tables) para os módulos 02, 03 e o Trabalho Final — sem custo, pois esses recursos são gratuitos
 
 ---
 
@@ -538,6 +518,8 @@ Depois, prossiga para o **[Módulo 02 — Ansible](../../../02-Ansible/README.md
 > terraform workspace select prod && terraform destroy -auto-approve
 > terraform workspace select dev  && terraform destroy -auto-approve
 > ```
+>
+> A **VPC `fiap-lab` permanece de pé** (sem custo — rede é gratuita); ela é usada pelos módulos 02, 03 e pelo Trabalho Final. Nenhum lab a destrói.
 
 ---
 

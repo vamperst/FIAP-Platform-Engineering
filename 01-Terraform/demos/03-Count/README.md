@@ -459,13 +459,13 @@ terraform destroy -auto-approve
 ```
 
 > [!IMPORTANT]
-> **Não destrua a rede (VPC e route tables) agora.** Os próximos labs — **01.4 (State)** e **01.5 (Workspaces)** — também usam a VPC `fiap-lab` criada no Lab 01.2. Se você apagar a rede aqui, eles não vão encontrar a VPC e falharão logo no início. A rede só será destruída **no final do Lab 01.5**, que é o último a usá-la.
+> **Não destrua a rede (VPC e route tables).** A VPC `fiap-lab` (criada no Lab 01.2) é a fundação compartilhada de todo o curso — é usada pelos labs **01.4 (State)**, **01.5 (Workspaces)** e também pelo **Trabalho Final**. Ela **permanece de pé** o tempo todo: VPC, subnets e route tables são **gratuitas**, então não há custo em mantê-la. O que custa (e você destrói ao fim de cada lab) são as EC2 e o ALB.
 
 <details>
 <summary><b>⚠ Se der erro: <code>DependencyViolation</code> (ao destruir algo preso na VPC)</b></summary>
 <blockquote>
 
-Esse erro aparece quando se tenta destruir a rede com um recurso ainda preso nela. Como **aqui você destrói só a frota** (a VPC permanece), o erro não deve ocorrer neste passo. Se aparecer no futuro (ao destruir a rede no Lab 01.5), confirme que o `destroy` da frota (`03-Count`) terminou de fato — sem instâncias `running` no painel EC2 e sem o load balancer `vortex-frota-alb` no painel — antes de destruir a VPC.
+Como **aqui você destrói só a frota** (a VPC permanece de pé), este erro não deve ocorrer neste passo. Ele aparece quando se tenta destruir uma VPC com algum recurso ainda preso nela — não é o caso deste lab, em que a rede é mantida de propósito.
 
 </blockquote>
 </details>
@@ -493,7 +493,7 @@ Abra o próximo lab: **[Lab 01.4 — State remoto](../04-State/README.md)**.
 Lá vamos mover o estado do Terraform para um bucket S3 compartilhado, para que o time inteiro da Vortex colabore na mesma infraestrutura sem corromper o estado.
 
 > [!CAUTION]
-> **Custo:** este lab roda até 3 EC2 `t3.micro` (~$0,01/h cada) + 1 Application Load Balancer (~$0,0225/h + LCU; para a escala do lab, mesma ordem de grandeza). Confirme no painel EC2 que **nenhuma** instância ficou `running` e que o load balancer `vortex-frota-alb` sumiu após o passo 13. A **VPC continua de pé** de propósito (sem custo relevante — VPC, subnets e route tables são gratuitas) e será destruída no Lab 01.5. Esquecer uma EC2/ALB ligados por um dia consome alguns dólares do orçamento do Learner Lab.
+> **Custo:** este lab roda até 3 EC2 `t3.micro` (~$0,01/h cada) + 1 Application Load Balancer (~$0,0225/h + LCU; para a escala do lab, mesma ordem de grandeza). Confirme no painel EC2 que **nenhuma** instância ficou `running` e que o load balancer `vortex-frota-alb` sumiu após o passo 13. A **VPC continua de pé** de propósito (sem custo — VPC, subnets e route tables são gratuitas) e é mantida assim por **todo o curso**: os módulos 02 (Ansible), 03 (CI/CD) e o Trabalho Final também a usam. Nenhum lab a destrói. Esquecer uma EC2/ALB ligados por um dia consome alguns dólares do orçamento do Learner Lab — mas a rede em si não pesa.
 
 ---
 
