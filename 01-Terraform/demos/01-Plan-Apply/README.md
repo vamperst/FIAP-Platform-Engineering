@@ -657,17 +657,15 @@ Cada atributo de um recurso é marcado pelo provider como *updatable in-place* o
 
 <a id="passo-23"></a>
 
-**23.** **Não** aplique a recriação. Vamos desfazer a mudança e confirmar que o plano volta ao normal **antes** de destruir. Faça em duas etapas separadas, para conseguir ler a saída de cada uma com calma.
+**23.** **Não** aplique a recriação. Vamos desfazer a mudança, confirmar que o plano volta ao normal e só então destruir — em etapas separadas, para você ler a saída de cada uma com calma.
 
-**23.1.** Desfaça a mudança e confirme que não há mais nada para alterar:
-
-**23.1.1.** Abra novamente o arquivo `instance.tf` no editor:
+**23.1.** Abra novamente o arquivo `instance.tf` no editor:
 
 ```bash
 code instance.tf
 ```
 
-**23.1.2.** Apague **todo** o conteúdo do arquivo e cole exatamente o texto abaixo no lugar (é o arquivo inteiro — voltamos ao estado do passo 21, **sem** a linha `availability_zone`):
+**23.2.** Apague **todo** o conteúdo do arquivo e cole exatamente o texto abaixo no lugar (é o arquivo inteiro — voltamos ao estado do passo 21, **sem** a linha `availability_zone`):
 
 ```hcl
 resource "aws_instance" "example" {
@@ -680,18 +678,18 @@ resource "aws_instance" "example" {
 }
 ```
 
-**23.1.3.** Salve o arquivo (**File → Save**, ou `Ctrl+S` / `Cmd+S`).
+**23.3.** Salve o arquivo (**File → Save**, ou `Ctrl+S` / `Cmd+S`).
 
-**23.1.4.** Rode **somente** o `plan` e **leia a saída com atenção**:
+**23.4.** Rode **somente** o `plan` e **leia a saída com atenção**:
 
 ```bash
 terraform plan
 ```
 
 > [!IMPORTANT]
-> O resultado esperado é a mensagem **`No changes. Your infrastructure matches the configuration.`** Esse é o objetivo deste passo: como você desfez a alteração, o código voltou a bater com o que existe na AWS, então **não há nada a fazer**. Confirme que viu essa mensagem antes de continuar — é a prova de que reverter funcionou. (Se aparecer algo a alterar/destruir, seu `instance.tf` ainda está diferente do bloco acima; revise o passo 23.1.2.)
+> O resultado esperado é a mensagem **`No changes. Your infrastructure matches the configuration.`** Esse é o objetivo deste passo: como você desfez a alteração, o código voltou a bater com o que existe na AWS, então **não há nada a fazer**. Confirme que viu essa mensagem antes de continuar — é a prova de que reverter funcionou. (Se aparecer algo a alterar/destruir, seu `instance.tf` ainda está diferente do bloco acima; revise o passo 23.2.)
 
-**23.2.** Agora sim, destrua a instância:
+**23.5.** Agora sim, destrua a instância:
 
 ```bash
 terraform destroy -auto-approve
