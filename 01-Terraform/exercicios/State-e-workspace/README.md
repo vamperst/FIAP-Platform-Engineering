@@ -73,27 +73,14 @@ cd /workspaces/FIAP-Platform-Engineering/01-Terraform/exercicios/State-e-workspa
 - a mais recente (`most_recent = true`)
 
 <details>
-<summary><b>💡 Clique para entender: o data source de AMI esperado</b></summary>
+<summary><b>💡 Clique para entender: o caminho (sem a resposta pronta)</b></summary>
 <blockquote>
 
-```hcl
-data "aws_ami" "amazon_linux_2" {
-  most_recent = true
-  owners      = ["amazon"]
+Este é um exercício autoral — o HCL é **seu**. Use estas pistas para chegar lá sozinho:
 
-  filter {
-    name   = "name"
-    values = ["amzn2-ami-hvm-2.0.202*-x86_64-gp2"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-}
-```
-
-Repare que é o **mesmo padrão** que as demos usam para Amazon Linux 2023 — aqui só muda o filtro de `name` para a família AL2 pedida no enunciado.
+- O bloco é um **`data "aws_ami"`** (não um `resource` — você está *descobrindo* uma AMI, não criando).
+- Olhe como as **demos** descobrem a Amazon Linux 2023 por `data "aws_ami"` (ex.: demo 01.1) — a estrutura é a **mesma**; aqui só muda o filtro de `name` para a família AL2 pedida.
+- Os filtros usam blocos `filter { name = "..."; values = [...] }`. Você precisa de um para o `name` (o padrão `amzn2-ami-hvm-...` do enunciado) e um para `virtualization-type`. Some `owners` e `most_recent`, conforme os parâmetros pedidos acima.
 
 Documentação oficial: [aws_ami data source](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ami)
 
@@ -107,23 +94,14 @@ Documentação oficial: [aws_ami data source](https://registry.terraform.io/prov
 **3.** Crie **2 instâncias** EC2 `t2.micro` usando a AMI do data source, com o nome carregando o workspace (`ec2-dev`, `ec2-prod`, `ec2-homol`). Use `count = 2` e `terraform.workspace` na tag `Name`.
 
 <details>
-<summary><b>💡 Clique para entender: nome por workspace</b></summary>
+<summary><b>💡 Clique para entender: o caminho (sem a resposta pronta)</b></summary>
 <blockquote>
 
-```hcl
-resource "aws_instance" "ec2" {
-  count         = 2
-  ami           = data.aws_ami.amazon_linux_2.id
-  instance_type = "t2.micro"
+Este é um exercício autoral — o HCL é **seu**. Use estas pistas para chegar lá sozinho:
 
-  tags = {
-    Name = "ec2-${terraform.workspace}-${count.index + 1}"
-  }
-}
-```
-
-- `terraform.workspace` devolve o ambiente atual, então o nome fica `ec2-dev-1`, `ec2-prod-1`, etc.
-- combine com `count` para as 2 instâncias por ambiente
+- Use o `resource "aws_instance"` com **`count = 2`** (mesma mecânica da frota da demo 01.3).
+- O `ami` vem do **data source que você criou no passo 2** (referencie-o, não cole um ID fixo).
+- O nome no `tags.Name` deve **interpolar `terraform.workspace`** para virar `ec2-dev-...`, `ec2-prod-...` conforme o ambiente. Pense em como combinar o nome do workspace com o `count.index` para diferenciar as duas instâncias.
 
 Dica oficial sobre interpolação do workspace: [Current workspace interpolation](https://developer.hashicorp.com/terraform/language/state/workspaces#current-workspace-interpolation)
 

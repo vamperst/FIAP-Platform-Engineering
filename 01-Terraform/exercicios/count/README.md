@@ -89,33 +89,17 @@ provider "aws" {
 **3.** Crie uma `variable` para controlar quantas filas criar e o recurso de fila SQS usando `count`. Consulte a [documentação oficial do recurso `aws_sqs_queue`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sqs_queue). Use **apenas** os atributos `name` e `tags`.
 
 <details>
-<summary><b>💡 Clique para entender: o esqueleto esperado</b></summary>
+<summary><b>💡 Clique para entender: o caminho (sem a resposta pronta)</b></summary>
 <blockquote>
 
-Você deve chegar em algo nesta linha (escreva você mesmo, adaptando):
+Este é um exercício autoral — o HCL é **seu**. Use estas pistas para chegar lá sozinho:
 
-```hcl
-variable "queue_count" {
-  description = "Quantidade de filas SQS a criar."
-  default     = 3
-}
+- Defina uma **`variable`** (ex.: `queue_count`) com um `default` numérico para controlar quantas filas criar.
+- No `resource "aws_sqs_queue"`, aplique **`count`** apontando para essa variável — é o **mesmo padrão** do `count` que você usou na frota de EC2 da demo 01.3 (volte lá se precisar relembrar a forma).
+- Para os nomes não colidirem, diferencie cada fila pelo **`count.index`** (0, 1, 2...). A função `format()` ajuda a numerar (ex.: `...-001`, `-002`).
+- Use **apenas** os atributos `name` e `tags`, como pede o enunciado.
 
-resource "aws_sqs_queue" "vortex" {
-  count = var.queue_count
-  name  = format("vortex-payments-%03d", count.index + 1)
-
-  tags = {
-    project = "vortex"
-    env     = "dev"
-  }
-}
-```
-
-- `count = var.queue_count` cria tantas filas quanto a variável indicar
-- `count.index` (0, 1, 2...) diferencia cada nome: `vortex-payments-001`, `-002`...
-- repare que é o **mesmo padrão** do `count` que você usou na frota de EC2 da demo 01.3
-
-Documentação oficial: [aws_sqs_queue](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sqs_queue) · [count](https://developer.hashicorp.com/terraform/language/meta-arguments/count)
+Documentação oficial: [aws_sqs_queue](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sqs_queue) · [count](https://developer.hashicorp.com/terraform/language/meta-arguments/count) · [função format](https://developer.hashicorp.com/terraform/language/functions/format)
 
 </blockquote>
 </details>
