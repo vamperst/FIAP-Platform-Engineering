@@ -573,13 +573,15 @@ resource "aws_instance" "example" {
 }
 ```
 
-Rode o `plan` e **leia o símbolo**:
+Rode o `plan` e **leia a saida**:
 
 ```bash
 terraform plan
 ```
 
 O Terraform mostra `~ update in-place` — uma tag é um atributo mutável, então ele **altera a máquina existente**, sem recriar.
+
+![](images/plan-2.png)
 
 <details>
 <summary><b>💡 Clique para entender: os símbolos do plano</b></summary>
@@ -643,6 +645,8 @@ Desta vez aparece `# forces replacement` na linha do `availability_zone`, e o re
 
 > [!IMPORTANT]
 > É exatamente aqui que mora o risco: um replace (`1 to destroy`) numa máquina de produção significa **downtime**. O `plan` te avisa **antes**. Em demos seguintes (e na vida real) usamos recursos como `create_before_destroy` para suavizar isso.
+
+![](images/Destroy-1.png)
 
 <details>
 <summary><b>💡 Clique para entender: por que a zona força replace e o tipo não</b></summary>
