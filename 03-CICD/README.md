@@ -60,10 +60,10 @@ Cada demo vira **uma resposta concreta** ao pedido do Diego: primeiro o pipeline
 
 ## Custo do módulo
 
-O pipeline cria a **API serverless** do `primeiro-projeto`: uma função **Lambda**, uma **API Gateway HTTP** e uma tabela **DynamoDB** on-demand. Todos os três ficam no **free-tier** e custam praticamente zero em uso de laboratório — não há servidor ligado 24/7.
+O pipeline cria a **API serverless** do `primeiro-projeto`: uma função **Lambda**, uma **API Gateway HTTP** e uma tabela **DynamoDB** on-demand — todas no **free-tier**. O que custa de verdade é o **runner** do módulo 02 (a EC2 `t3.small`, ~$0,02/h), que fica ligado para executar os pipelines deste módulo.
 
 > [!CAUTION]
-> Mesmo sendo free-tier, ao terminar o módulo rode `terraform destroy -auto-approve` no `primeiro-projeto` para não deixar recursos órfãos na conta. A API só responde enquanto os recursos existirem.
+> **Não destrua o runner antes de terminar o módulo 03** — os pipelines dependem dele. O `terraform destroy` da API **e** do runner está no **passo final do Lab 03.2** (Parte 5). Rode lá, ao concluir o CI/CD, para zerar o custo.
 
 ## Próximo passo
 

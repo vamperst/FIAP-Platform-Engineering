@@ -46,7 +46,7 @@ Vamos separar com clareza **quem faz o quê**: o **Terraform** cria a EC2 e prep
 - provisionar a EC2 do runner com Terraform usando state remoto no S3
 - conectar o Ansible ao host criado via inventário (`hosts`), usando o connection plugin `community.aws.aws_ssm` (sem chave SSH, sem porta 22)
 - rodar um playbook que instala, configura e **registra** o GitLab Runner — lendo o token direto do SSM
-- destruir a infraestrutura ao final para não deixar custo ligado
+- deixar o runner de pé para o módulo 03 (a destruição da infra acontece ao final do Lab 03.2)
 
 ## O que você terá ao final
 
@@ -66,7 +66,6 @@ Ao final deste laboratório, você terá uma EC2 rodando como **GitLab Runner re
 | [Parte 5](#parte-5---gerando-o-token-do-runner-e-guardando-no-ssm) | Gerar o token e guardá-lo no SSM | [10](#passo-10) · [11](#passo-11) · [12](#passo-12) · [13](#passo-13) · [14](#passo-14) · [15](#passo-15) · [16](#passo-16) | ~10 min |
 | [Parte 6](#parte-6---provisionando-a-ec2-do-runner-com-terraform) | Provisionar a EC2 com Terraform | [17](#passo-17) · [18](#passo-18) · [19](#passo-19) · [20](#passo-20) · [21](#passo-21) · [22](#passo-22) | ~15 min |
 | [Parte 7](#parte-7---configurando-a-ec2-como-runner-com-ansible) | Rodar o playbook Ansible | [23](#passo-23) · [24](#passo-24) · [25](#passo-25) · [26](#passo-26) | ~10 min |
-| [Parte 8](#parte-8---destruindo-a-infraestrutura) | Destruir a infra ao final | [27](#passo-27) | ~3 min |
 
 > [!TIP]
 > Se travou em algum passo, você pode pular direto: clique no número do passo na coluna **Passos** acima.
@@ -804,34 +803,10 @@ Quase sempre é o **token**. Verifique:
 
 ---
 
-## Parte 8 - Destruindo a infraestrutura
-
-### Resultado esperado desta parte
-
-Ao final desta etapa, a EC2 do runner será destruída, zerando o custo.
-
----
-
-<a id="passo-27"></a>
-
-**27.** A EC2 do runner é infraestrutura **paga e ligada**. Assim que terminar de validar o runner, destrua tudo. Volte para a pasta do Terraform e rode o destroy:
-
-```bash
-cd /workspaces/FIAP-Platform-Engineering/02-Ansible/01-provisionando-gitlab-runner/terraform-gitlab-runner/
-terraform destroy -auto-approve
-```
+## Conclusão
 
 > [!CAUTION]
-> **Destroy é obrigatório, não opcional.** A EC2 `t2.micro` custa ~$0,0116/h. Esquecê-la ligada por uma semana consome ~$2 do orçamento do Learner Lab — pouco, mas evitável. Diferente de "pausar", o `destroy` **zera** o custo e remove o recurso de verdade. O state remoto no S3 permanece e custa centavos.
-
-### Checkpoint
-
-- o `terraform destroy` terminou com `Destroy complete!`
-- a EC2 não aparece mais no console do EC2
-
----
-
-## Conclusão
+> **NÃO destrua o runner agora.** A EC2 que você acabou de configurar é o **mesmo runner que o módulo 03 (CI/CD) vai usar** para rodar os pipelines. Se você destruí-la aqui, o próximo módulo não terá runner e os pipelines ficarão presos em "stuck". O `terraform destroy` deste runner está no **final do Lab 03.2** — só rode lá, quando terminar o CI/CD. Rede, EC2 e o restante ficam de pé até lá. (A EC2 `t3.small` custa ~$0,02/h; ao terminar o módulo 03 você destrói e zera o custo.)
 
 Se você chegou até aqui, então já executou:
 
@@ -841,7 +816,6 @@ Se você chegou até aqui, então já executou:
 - geração do token de registro do runner e armazenamento seguro no SSM Parameter Store (sem hardcode)
 - provisionamento da EC2 com Terraform usando state remoto no S3, com bootstrap via SSM
 - configuração da EC2 como GitLab Runner via playbook Ansible, conectando via SSM (sem chave, sem porta 22)
-- destruição da infraestrutura ao final
 
 **Mensagem para Helena**: o runner da Vortex agora sobe por código. O "documento de 30 passos" virou um `terraform apply` seguido de um `ansible-playbook` — qualquer pessoa do time sobe um runner idêntico, e o Ansible garante que rodar de novo não quebra nada. Está pronto para automatizar os deploys no módulo de CI/CD.
 

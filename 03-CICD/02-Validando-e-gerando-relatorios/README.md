@@ -52,6 +52,7 @@ Um pipeline de 3 stages (`validate → plan → apply`) onde o `validate` roda *
 | [Parte 2](#parte-2---adicionando-o-stage-validate) | Adicionando o stage `validate` (jobs paralelos) | [3](#passo-3) · [4](#passo-4) | ~12 min |
 | [Parte 3](#parte-3---disparando-o-pipeline) | Disparando o pipeline | [5](#passo-5) · [6](#passo-6) | ~5 min |
 | [Parte 4](#parte-4---lendo-o-relatorio-de-testes) | Lendo o relatório de testes | [7](#passo-7) · [8](#passo-8) · [9](#passo-9) | ~10 min |
+| [Parte 5](#parte-5---destruindo-a-infraestrutura) | Destruindo a API e o runner ao final | [10](#passo-10) · [11](#passo-11) | ~5 min |
 
 > [!TIP]
 > Se travou em algum passo, clique no número do passo na coluna **Passos** acima.
@@ -439,6 +440,49 @@ Se você chegou até aqui, então:
 
 ---
 
+## Parte 5 - Destruindo a infraestrutura
+
+### Resultado esperado desta parte
+
+Ao final desta etapa, a API serverless **e o runner** (a EC2 do módulo 02) terão sido destruídos, zerando o custo. Este é o **fim do arco** — agora é seguro destruir o runner, porque nenhum lab posterior depende mais dele.
+
+> [!CAUTION]
+> Só destrua o runner **aqui**, no fim do módulo 03. Se você tivesse destruído no fim do módulo 02, os pipelines deste módulo ficariam "stuck" (sem runner). Por isso o destroy do runner foi adiado até este ponto.
+
+---
+
+<a id="passo-10"></a>
+
+**10.** Destrua a **API serverless** do `primeiro-projeto`. No terminal do Codespaces:
+
+```bash
+cd /workspaces/FIAP-Platform-Engineering/02-Ansible/01-provisionando-gitlab-runner/primeiro-projeto
+terraform destroy -auto-approve
+```
+
+Deve terminar com `Destroy complete!`. Isso remove a Lambda, a API Gateway e a tabela DynamoDB.
+
+---
+
+<a id="passo-11"></a>
+
+**11.** Destrua o **runner** (a EC2 provisionada no módulo 02):
+
+```bash
+cd /workspaces/FIAP-Platform-Engineering/02-Ansible/01-provisionando-gitlab-runner/terraform-gitlab-runner
+terraform destroy -auto-approve
+```
+
+> [!CAUTION]
+> **Destroy é obrigatório, não opcional.** A EC2 `t3.small` do runner fica **ligada e cobrando** (~$0,02/h) enquanto existir. Diferente de "pausar", o `destroy` **zera** o custo. O state remoto no S3 permanece e custa centavos. A rede `fiap-lab` é gratuita e pode ficar de pé.
+
+### Checkpoint
+
+- os dois `terraform destroy` terminaram com `Destroy complete!`
+- a Lambda, a API Gateway, a tabela DynamoDB e a EC2 do runner não aparecem mais no console
+
+---
+
 ## Conclusão
 
 Neste laboratório você:
@@ -448,6 +492,7 @@ Neste laboratório você:
 - rodou `terraform fmt`/`validate`, **TFLint**, **Checkov**, **terraform test** e validação do código da Lambda
 - gerou e exportou relatórios em **JUnit XML**
 - visualizou os relatórios na aba **Tests** do GitLab
+- destruiu a API e o runner ao final, zerando o custo
 
 **Mensagem para Diego**: agora a config passa por formatação, boas práticas, segurança e testes antes do `apply`, e cada execução deixa relatórios legíveis. Config malfeita é flagrada no pipeline, não na fatura. O pedido do começo do mês está completo: push → valida → planeja → aplica, tudo automático e auditável.
 
@@ -456,9 +501,6 @@ Neste laboratório você:
 ## Próximo passo
 
 Você fechou o arco da Vortex Mobility: a infraestrutura virou código (módulo 01), o provisionamento virou playbook (módulo 02) e o deploy virou pipeline validado (módulo 03).
-
-> [!CAUTION]
-> **Destrua a infraestrutura ao terminar.** Mesmo sendo free-tier, não deixe recursos órfãos. Na pasta do `primeiro-projeto`, rode `terraform destroy -auto-approve`. E lembre do runner do módulo 02 (a EC2): destrua-o também quando não precisar mais.
 
 Prossiga para o **[Trabalho Final](../../Trabalho-final/README.md)** — onde você junta Terraform, Ansible e CI/CD para entregar a infraestrutura da Vortex de ponta a ponta.
 
